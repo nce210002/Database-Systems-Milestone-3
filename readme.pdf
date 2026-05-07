@@ -1,0 +1,29 @@
+Project: Airport Management System (Milestone 2)
+
+Language Used: Python 3
+Database: SQLite
+
+How to Run:
+
+1. Open terminal in project folder
+2. Run: python main.py
+
+Files Included:
+
+* main.py
+* airport.db
+* schema.sql
+* sample_data.sql
+
+Features:
+
+* Search flight by flight number
+* Search trip (direct and connecting flights)
+* Seat availability check
+* Passenger itinerary retrieval
+
+Notes:
+
+* No GUI (Milestone 2 requirement)
+* All features run through command line
+ 
