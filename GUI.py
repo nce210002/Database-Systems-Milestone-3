@@ -2,7 +2,7 @@ import tkinter as tk
 
 root = tk.Tk()
 root.title("Airport System")
-root.geometry("550x200")  # Default window size
+root.geometry("550x250")  # Default window size
 
 # Intro GUI page
 label = tk.Label(root, text="Welcome to the Airport System! Select an activity.")
@@ -42,5 +42,10 @@ passengeritinerary_button.pack(side=tk.LEFT, padx=5, pady=5)
 # Aircraft Utilization Report Button
 aircraftutilizationreport_button = tk.Button(middle_frame, text="Aircraft Utilization Report 📊", width=25, height=3, command=root.destroy)
 aircraftutilizationreport_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+
+# Exit Button
+exit_button = tk.Button(root, text="Exit 👋", width=18, height=3, command=root.destroy)
+exit_button.pack(pady=10)
 
 root.mainloop()
