@@ -18,21 +18,29 @@ top_frame = tk.Frame(button_frame)
 top_frame.pack()
 
 # Search Flight Button
-searchflight_button = tk.Button(root, text="Search Flight 🔍✈️", width=18, height=3, command=root.destroy)
+searchflight_button = tk.Button(top_frame, text="Search Flight 🔍✈️", width=18, height=3, command=root.destroy)
 searchflight_button.pack(side=tk.LEFT, padx=5, pady=5)
 
 # Search Trip Button
-searchtrip_button = tk.Button(root, text="Search Trip 🔍📍", width=18, height=3, command=root.destroy)
+searchtrip_button = tk.Button(top_frame, text="Search Trip 🔍📍", width=18, height=3, command=root.destroy)
 searchtrip_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-# Seat Avaulability Button
-seatavailability_button = tk.Button(root, text="Seat Availability 💺", width=18, height=3, command=root.destroy)
+# Seat Availability Button
+seatavailability_button = tk.Button(top_frame, text="Seat Availability 💺", width=18, height=3, command=root.destroy)
 seatavailability_button.pack(side=tk.LEFT, padx=5, pady=5)
 
 
 """Middle Row"""
+# Middle row frame
+middle_frame = tk.Frame(button_frame)
+middle_frame.pack()
+
 # Passenger Itinerary Button
-passengeritinerary_button = tk.Button(root, text="Passenger Itinerary 👤", width=18, height=3, command=root.destroy)
-passengeritinerary_button.pack(side=tk.BOTTOM)
+passengeritinerary_button = tk.Button(middle_frame, text="Passenger Itinerary 👤", width=25, height=3, command=root.destroy)
+passengeritinerary_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+# Aircraft Utilization Report Button
+aircraftutilizationreport_button = tk.Button(middle_frame, text="Aircraft Utilization Report 📊", width=25, height=3, command=root.destroy)
+aircraftutilizationreport_button.pack(side=tk.LEFT, padx=5, pady=5)
 
 root.mainloop()
