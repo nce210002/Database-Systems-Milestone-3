@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import sqlite3
+import os
 
 def run():
     """Main function to run the Flight Search GUI"""
@@ -14,10 +15,15 @@ class FlightSearchApp:
         self.root.title("Flight Search")
         self.root.geometry("600x500")
         
-        # Database connection
-        self.conn = sqlite3.connect(':memory:')  # Using in-memory DB for demo
+        # Database connection using project database file
+        script_dir = os.path.dirname(__file__)
+        db_path = os.path.abspath(os.path.join(script_dir, '..', 'airport.db'))
+        if not os.path.exists(db_path):
+            messagebox.showerror("DB Error", f"Database not found: {db_path}")
+            self.root.destroy()
+            return
+        self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
-        self.setup_database()
         
         # Create GUI
         self.create_widgets()
@@ -156,6 +162,8 @@ class FlightSearchApp:
         )
         self.results_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=self.results_text.yview)
+        # tag for error messages (red)
+        self.results_text.tag_configure('error', foreground='red')
     
     def search_flight(self):
         """Search for flight and display results"""
@@ -194,7 +202,8 @@ class FlightSearchApp:
                     tk.END,
                     f"⚠ Flight number not available\n\n"
                     f"Try again with a valid flight number.\n\n"
-                    f"Available flights: AA101, UA202, DL303, SW404"
+                    f"Available flights: AA101, UA202, DL303, SW404",
+                    'error'
                 )
             
             self.results_text.config(state=tk.DISABLED)

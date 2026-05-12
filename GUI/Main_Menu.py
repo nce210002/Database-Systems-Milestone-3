@@ -46,7 +46,15 @@ def run():
     searchtrip_button.pack(side=tk.LEFT, padx=5, pady=5)
 
     # Seat Availability Button
-    seatavailability_button = tk.Button(top_frame, text="Seat Availability 💺", width=18, height=3, command=lambda: root.destroy())
+    def open_seat_availability():
+        root.destroy()
+        try:
+            import seat_availiability
+        except Exception:
+            from . import seat_availiability
+        seat_availiability.run()
+
+    seatavailability_button = tk.Button(top_frame, text="Seat Availability 💺", width=18, height=3, command=open_seat_availability)
     seatavailability_button.pack(side=tk.LEFT, padx=5, pady=5)
 
 
@@ -56,11 +64,27 @@ def run():
     middle_frame.pack()
 
     # Passenger Itinerary Button
-    passengeritinerary_button = tk.Button(middle_frame, text="Passenger Itinerary 👤", width=25, height=3, command=lambda: root.destroy())
+    def open_passenger_itinerary():
+        root.destroy()
+        try:
+            import passenger_itinerary
+        except Exception:
+            from . import passenger_itinerary
+        passenger_itinerary.run()
+
+    passengeritinerary_button = tk.Button(middle_frame, text="Passenger Itinerary 👤", width=25, height=3, command=open_passenger_itinerary)
     passengeritinerary_button.pack(side=tk.LEFT, padx=5, pady=5)
 
     # Aircraft Utilization Report Button
-    aircraftutilizationreport_button = tk.Button(middle_frame, text="Aircraft Utilization Report 📊", width=25, height=3, command=lambda: root.destroy())
+    def open_aircraft_utilization():
+        root.destroy()
+        try:
+            import aircraft_utilization_report
+        except Exception:
+            from . import aircraft_utilization_report
+        aircraft_utilization_report.run()
+
+    aircraftutilizationreport_button = tk.Button(middle_frame, text="Aircraft Utilization Report 📊", width=25, height=3, command=open_aircraft_utilization)
     aircraftutilizationreport_button.pack(side=tk.LEFT, padx=5, pady=5)
 
 

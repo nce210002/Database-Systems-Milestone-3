@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import sqlite3
+import os
 
 
 def run():
@@ -15,10 +16,15 @@ class TripSearchApp:
         self.root.title("Search Trip")
         self.root.geometry("700x520")
 
-        # In-memory database for UI demo
-        self.conn = sqlite3.connect(':memory:')
+        # Connect to project database file
+        script_dir = os.path.dirname(__file__)
+        db_path = os.path.abspath(os.path.join(script_dir, '..', 'airport.db'))
+        if not os.path.exists(db_path):
+            messagebox.showerror("DB Error", f"Database not found: {db_path}")
+            self.root.destroy()
+            return
+        self.conn = sqlite3.connect(db_path)
         self.cursor = self.conn.cursor()
-        self.setup_database()
 
         self.create_widgets()
 
@@ -106,24 +112,16 @@ class TripSearchApp:
         results_outer.pack(fill=tk.BOTH, expand=True)
 
         left_frame = tk.Frame(results_outer, relief=tk.SUNKEN, borderwidth=1)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0,8))
+        left_frame.pack(fill=tk.BOTH, expand=True)
 
-        right_frame = tk.Frame(results_outer, relief=tk.SUNKEN, borderwidth=1, width=220)
-        right_frame.pack(side=tk.LEFT, fill=tk.Y)
-
-        # Left: Available results
-        left_title = tk.Label(left_frame, text="If available", font=('Arial', 12, 'bold'))
+        # Results area (single pane for both data and messages)
+        left_title = tk.Label(left_frame, text="Flight Info", font=('Arial', 12, 'bold'))
         left_title.pack(anchor='nw', padx=8, pady=8)
 
         self.left_text = tk.Text(left_frame, font=('Courier', 10), state=tk.DISABLED)
         self.left_text.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0,8))
-
-        # Right: Unavailable / messages
-        right_title = tk.Label(right_frame, text="If not", font=('Arial', 12, 'bold'))
-        right_title.pack(anchor='nw', padx=8, pady=8)
-
-        self.right_text = tk.Text(right_frame, font=('Arial', 10), height=10, state=tk.DISABLED, wrap=tk.WORD)
-        self.right_text.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0,8))
+        # tag for error messages (red)
+        self.left_text.tag_configure('error', foreground='red')
 
         # Helpful note at bottom
         note = tk.Label(content_frame, text="Direct Flights and Connecting Flights (if any).", font=('Arial', 10))
@@ -141,10 +139,11 @@ class TripSearchApp:
             messagebox.showwarning("Input Error", "Please enter both origin and destination airports")
             return
 
-        # Direct flights query using FLIGHT_LEG
+        # Direct flights query using FLIGHT_LEG (use schema column names)
         self.cursor.execute(
             """
-            SELECT * FROM FLIGHT_LEG
+            SELECT Flight_no, Leg_no, Departure_airport, Arrival_airport, Dep_time, Arr_time
+            FROM FLIGHT_LEG
             WHERE Departure_airport=? AND Arrival_airport=?
             """,
             (src, dst)
@@ -152,27 +151,26 @@ class TripSearchApp:
         direct = self.cursor.fetchall()
 
         # Connecting flights: two legs where f1.Arrival_airport = f2.Departure_airport
+        # Select leg numbers and dep/arr times using schema column names
         self.cursor.execute(
-            """
-            SELECT f1.Flight_no, f1.Departure_airport, f1.Arrival_airport, f2.Flight_no, f2.Arrival_airport
-            FROM FLIGHT_LEG f1, FLIGHT_LEG f2
-            WHERE f1.Arrival_airport = f2.Departure_airport
-              AND f1.Departure_airport=? AND f2.Arrival_airport=?
-            """,
-            (src, dst)
-        )
+                        """
+                        SELECT f1.Flight_no, f1.Leg_no, f1.Departure_airport, f1.Arrival_airport, f1.Dep_time, f1.Arr_time,
+                                     f2.Flight_no, f2.Leg_no, f2.Departure_airport, f2.Arrival_airport, f2.Dep_time, f2.Arr_time
+                        FROM FLIGHT_LEG f1 JOIN FLIGHT_LEG f2
+                            ON f1.Arrival_airport = f2.Departure_airport
+                        WHERE f1.Departure_airport=? AND f2.Arrival_airport=?
+                        """,
+                        (src, dst)
+                )
         connecting = self.cursor.fetchall()
 
         # display
         self.left_text.config(state=tk.NORMAL)
         self.left_text.delete(1.0, tk.END)
 
-        self.right_text.config(state=tk.NORMAL)
-        self.right_text.delete(1.0, tk.END)
-
         if direct:
             self.left_text.insert(tk.END, "Direct Flights:\n\n")
-            headers = ['Flight_no', 'Departure', 'Arrival', 'Dep_time', 'Arr_time', 'Status']
+            headers = ['Flight_no', 'Leg', 'Departure', 'Arrival', 'Dep_time', 'Arr_time']
             header_line = " | ".join(f"{h:12}" for h in headers)
             self.left_text.insert(tk.END, header_line + "\n")
             self.left_text.insert(tk.END, "-" * len(header_line) + "\n")
@@ -183,17 +181,21 @@ class TripSearchApp:
 
         if connecting:
             self.left_text.insert(tk.END, "Connecting Flights (2-leg):\n\n")
-            self.left_text.insert(tk.END, "f1_Flight_no | f1_Dep | f1_Arr | f2_Flight_no | f2_Arr\n")
-            self.left_text.insert(tk.END, "-" * 60 + "\n")
+            # include leg numbers and use explicit column widths for alignment
+            headers = ['f1_no','f1_leg','f1_dep','f1_arr','f1_dep_time','f1_arr_time', 'f2_no','f2_leg','f2_dep','f2_arr','f2_dep_time','f2_arr_time']
+            widths = [10,4,6,6,11,11,10,4,6,6,11,11]
+            header_line = " | ".join(f"{h:{w}}" for h,w in zip(headers,widths))
+            self.left_text.insert(tk.END, header_line + "\n")
+            self.left_text.insert(tk.END, "-" * len(header_line) + "\n")
             for row in connecting:
-                # row: (f1_no, f1_dep, f1_arr, f2_no, f2_arr)
-                self.left_text.insert(tk.END, " | ".join(f"{str(v):12}" for v in row) + "\n")
+                # row: (f1_no, f1_leg, f1_dep, f1_arr, f1_dep_time, f1_arr_time, f2_no, f2_leg, f2_dep, f2_arr, f2_dep_time, f2_arr_time)
+                line = " | ".join(f"{str(v):{w}}" for v,w in zip(row,widths))
+                self.left_text.insert(tk.END, line + "\n")
 
         if not direct and not connecting:
-            self.right_text.insert(tk.END, "Unfortunately, the trip is not available. Try a different one.")
+            self.left_text.insert(tk.END, "Unfortunately, the trip is not available. Try a different one.", 'error')
 
         self.left_text.config(state=tk.DISABLED)
-        self.right_text.config(state=tk.DISABLED)
 
     def __del__(self):
         if hasattr(self, 'conn'):
