@@ -130,6 +130,35 @@ class SeatAvailabilityApp:
         self.left_text.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0,8))
         # tag for error messages (red)
         self.left_text.tag_configure('error', foreground='red')
+        # tag for success messages (green)
+        self.left_text.tag_configure('success', foreground='green')
+
+        # Booking form
+        booking = tk.Frame(content)
+        booking.pack(fill=tk.X, pady=(8,0))
+
+        leg_label = tk.Label(booking, text="Leg no:", font=('Arial', 11))
+        leg_label.grid(row=0, column=0, sticky='w')
+        self.leg_entry = tk.Entry(booking, font=('Arial', 12), width=6)
+        self.leg_entry.grid(row=0, column=1, padx=8)
+
+        seat_label = tk.Label(booking, text="Seat no:", font=('Arial', 11))
+        seat_label.grid(row=0, column=2, sticky='w')
+        self.seat_entry = tk.Entry(booking, font=('Arial', 12), width=8)
+        self.seat_entry.grid(row=0, column=3, padx=8)
+
+        name_label = tk.Label(booking, text="Customer name:", font=('Arial', 11))
+        name_label.grid(row=0, column=4, sticky='w')
+        self.cust_entry = tk.Entry(booking, font=('Arial', 12), width=20)
+        self.cust_entry.grid(row=0, column=5, padx=8)
+
+        phone_label = tk.Label(booking, text="Phone:", font=('Arial', 11))
+        phone_label.grid(row=0, column=6, sticky='w')
+        self.phone_entry = tk.Entry(booking, font=('Arial', 12), width=14)
+        self.phone_entry.grid(row=0, column=7, padx=8)
+
+        book_btn = tk.Button(booking, text="Book This Seat", command=self.book_seat, font=('Arial', 11), bg='#2196F3', fg='white')
+        book_btn.grid(row=0, column=8, padx=8)
 
     def check_availability(self):
         flight = self.flight_entry.get().strip()
@@ -165,6 +194,78 @@ class SeatAvailabilityApp:
             self.left_text.insert(tk.END, "Data not found. Try again.", 'error')
 
         self.left_text.config(state=tk.DISABLED)
+
+    def book_seat(self):
+        flight = self.flight_entry.get().strip()
+        date = self.date_entry.get().strip()
+        leg = self.leg_entry.get().strip()
+        seat_no = self.seat_entry.get().strip()
+        customer = self.cust_entry.get().strip()
+        phone = self.phone_entry.get().strip()
+
+        if not (flight and date and leg and seat_no and customer):
+            messagebox.showwarning("Input Error", "Please fill flight, date, leg, seat number, and customer name")
+            return
+
+        try:
+            leg_no = int(leg)
+        except ValueError:
+            messagebox.showwarning("Input Error", "Leg no must be an integer")
+            return
+
+        # Check if seat already booked
+        self.cursor.execute('''
+            SELECT 1 FROM SEAT WHERE Flight_no=? AND Date=? AND Leg_no=? AND Seat_no=?
+        ''', (flight, date, leg_no, seat_no))
+        if self.cursor.fetchone():
+            self.left_text.config(state=tk.NORMAL)
+            self.left_text.insert(tk.END, f"Seat {seat_no} on leg {leg_no} is already booked.\n", 'error')
+            self.left_text.config(state=tk.DISABLED)
+            return
+
+        # Check available seats for leg
+        self.cursor.execute('''
+            SELECT Available_seats FROM LEG_INSTANCE WHERE Flight_no=? AND Date=? AND Leg_no=?
+        ''', (flight, date, leg_no))
+        row = self.cursor.fetchone()
+        if not row:
+            self.left_text.config(state=tk.NORMAL)
+            self.left_text.insert(tk.END, f"No leg instance found for Flight {flight} on {date} leg {leg_no}.\n", 'error')
+            self.left_text.config(state=tk.DISABLED)
+            return
+
+        avail = row[0]
+        try:
+            avail_int = int(avail)
+        except Exception:
+            avail_int = 0
+
+        if avail_int <= 0:
+            self.left_text.config(state=tk.NORMAL)
+            self.left_text.insert(tk.END, f"No available seats left on leg {leg_no}.\n", 'error')
+            self.left_text.config(state=tk.DISABLED)
+            return
+
+        # Book seat: insert into SEAT and decrement LEG_INSTANCE
+        try:
+            self.cursor.execute('''
+                INSERT INTO SEAT (Seat_no, Flight_no, Date, Leg_no, Customer_name, Phone)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (seat_no, flight, date, leg_no, customer, phone))
+            self.cursor.execute('''
+                UPDATE LEG_INSTANCE SET Available_seats = Available_seats - 1
+                WHERE Flight_no=? AND Date=? AND Leg_no=?
+            ''', (flight, date, leg_no))
+            self.conn.commit()
+        except Exception as e:
+            self.left_text.config(state=tk.NORMAL)
+            self.left_text.insert(tk.END, f"Booking failed: {e}\n", 'error')
+            self.left_text.config(state=tk.DISABLED)
+            return
+
+        messagebox.showinfo("Booked", f"Seat {seat_no} booked for {customer} on {date}")
+        # Refresh availability display
+        self.check_availability()
 
     def __del__(self):
         if hasattr(self, 'conn'):
